@@ -1,0 +1,11 @@
+# Clé API ET fichier des pakages
+.env
+/node_modules
+
+# Build files
+dist/
+build/
+
+# Éditeurs de code
+.idea/
+.vscode/
