@@ -18,10 +18,8 @@ const register = async (req, res) => {
       if (existingUser) {
          return res.status(400).json({ message: "L'utilisateur existe déjà." });
       }
-      // Hasher le mot de passe
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Créer un nouvel utilisateur
       const newUser = await UserRepository.createUser({
          firstName,
          lastName,
@@ -32,7 +30,7 @@ const register = async (req, res) => {
       res.status(200).send({
          success: true,
          message: "Inscription réussie !",
-         token: Token.generateToken(newUser), // Générer un token JWT et envoie
+         token: Token.generateToken(newUser),
          user: {
             _id: newUser._id,
             firstName: newUser.firstName,

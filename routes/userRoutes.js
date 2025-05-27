@@ -1,25 +1,13 @@
 const express = require("express");
 const router = express.Router();
+const userController = require("../controllers/userController");
 const { tokenCheck } = require("../middleware/authMiddleware");
-const { roleCheck } = require("../middleware/roleMiddleware");
-const { registerSchema } = require("../services/authValideService");
-const controllersUsers = require("../controllers/userController");
+const upload = require("../middleware/uploadMiddleware");
 
-//Les routes pour (admin uniquement)
+router.get("/profile", tokenCheck, userController.getUserProfile);
 
-// Liste des utilisateurs 
-router.get('/listes', tokenCheck, roleCheck(['admin']), controllersUsers.getAllUsers);
+router.put("/profile", tokenCheck, userController.updateUserProfile);
 
-//recuperer les uniquement les Utilisateurs et les stats
-router.get("/all-users", tokenCheck, roleCheck(['admin']),  controllersUsers.getAllMembers);
-
-// Récuperer un utilisateur
-router.get("/:userId", tokenCheck, roleCheck(['admin']), controllersUsers.getOneUser);
-
-// Modifier des utilisateurs
-router.patch("/:id", tokenCheck, roleCheck(['admin']), controllersUsers.updateUser);
-
-// Supprimer des utilisateurs
-router.delete("/delete/:userId", tokenCheck, roleCheck(['admin']), controllersUsers.deleteUser);
+router.put("/avatar", tokenCheck, upload.single('avatar'), userController.updateUserAvatar);
 
 module.exports = router;

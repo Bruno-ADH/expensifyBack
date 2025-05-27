@@ -36,10 +36,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static('uploads')); // Rendre les fichiers accessibles
 
-// Routes conexion et inscription
-app.use('/api/authenticate', authRoutes);
-//Routes pour l'admin et gestions des users
-app.use('/api/users', userRoutes);
+app.use('/api/v1/authenticate', authRoutes);
+
+app.use('/api/v1/users', userRoutes);
 
 app.get("/", (req, res) => {
     res.json({ message: "Bienvenue sur Expensify !" });

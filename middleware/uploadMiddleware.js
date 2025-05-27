@@ -1,26 +1,41 @@
-const multer = require ("multer");
+const multer = require('multer');
+const path = require('path');
 
-// Configuartion du stokage avec multer : dossier de destination + nom du fichier
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Crée ce dossier à la racine de ton projet
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = `${ Date.now() }-${ Math.round(Math.random() * 1E9)}`;
-        cb(null, uniqueSuffix);
-    },
-});
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        const name = path.basename(file.originalname, ext);
+        cb(null, `${name}-${Date.now()}${ext}`);
+    }
+})
 
-//Filtrer les types de fichier d'image
+const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'image/webp',
+    'image/gif'
+  ];
+
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    if(allowedTypes.includes(file.mimetype)){
+    console.log("Type de fichier reçu :", file.mimetype);
+    
+    if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
-    }else{
-        cb(new Error('Seule .jpeg, .jpg et png formats sont requis'), false);
+    } else {
+        cb(new Error('Format de fichier non autorisé'), false);
     }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+    }
+});
 
 module.exports = upload;
