@@ -3,13 +3,13 @@ const Joi = require("joi");
 const registerSchema = async (req, res, next) => {
     
     const schemaRegister = Joi.object({
-        firstName: Joi.string().min(4).required().messages({
+        firstName: Joi.string().min(2).required().messages({
             'string.base': `"username" doit-être une chaîne de caratère 'text'`,
             'string.empty': `"username" ne doit pas être vide`,
             'string.min': `"username" doit avoir une longueur minimum de {#limit}`,
             'any.required': `"username" est un champs obligatoire`
             }),
-        lastName: Joi.string().min(4).required().messages({
+        lastName: Joi.string().min(2).required().messages({
             'string.base': `"username" doit-être une chaîne de caratère 'text'`,
             'string.empty': `"username" ne doit pas être vide`,
             'string.min': `"username" doit avoir une longueur minimum de {#limit}`,
@@ -27,15 +27,7 @@ const registerSchema = async (req, res, next) => {
             'string.password': `"password" doit-être un password valide`,
             'any.required': `"password" est un champs obligatoire`
             }),
-        confirmPassword: Joi.ref('password'),
-        roleName: Joi.string().required().messages({
-            'string.base': `"roleName" doit-être une chaîne de caratère 'text'`,
-            'string.empty': `"roleName" ne doit pas être vide`,
-            'any.required': `"roleName" est un champs obligatoire`
-        }),
-        status : Joi.string().messages({
-            'string.base': `"status" doit-être une chaîne de caratère 'text'`
-            })
+        confirmPassword: Joi.ref('password')
     });
 
     const { error } = schemaRegister.validate(req.body);

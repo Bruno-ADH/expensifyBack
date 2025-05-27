@@ -31,7 +31,7 @@ const register = async (req, res) => {
       });
       res.status(200).send({
          success: true,
-         message: "Inscription réussie, En attente d'approbation !",
+         message: "Inscription réussie !",
          token: Token.generateToken(newUser), // Générer un token JWT et envoie
          user: {
             _id: newUser._id,
@@ -80,17 +80,18 @@ const login = async (req, res) => {
          message: "Connexion réussie !",
          token: Token.generateToken(user), // Générer un token JWT
          user: {
-            _id: newUser._id,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            email: newUser.email,
-            phone: newUser.phone,
-            role: newUser.roleName,
-            avatar: newUser.avatar
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            role: user.roleName,
+            avatar: user.avatar
          }
       });
 
    } catch (error) {
+      console.error("Erreur de connexion :", error.message);
       res.status(500).json({ message: "Erreur serveur", error: error });
    }
 };
