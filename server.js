@@ -9,6 +9,8 @@ const errorHandler = require('./middleware/errorHandler.js');
 const logger = require('./middleware/logger.js');
 const path = require('path');
 const requestId = require("./middleware/requestId");
+const categoryRoutes = require("./routes/category.routes");
+const expenseRoutes = require('./routes/expense.routes');
 
 const app = express();
 
@@ -39,6 +41,10 @@ app.use('/uploads', express.static('uploads')); // Rendre les fichiers accessibl
 app.use('/api/v1/authenticate', authRoutes);
 
 app.use('/api/v1/users', userRoutes);
+
+app.use("/api/v1/categories", categoryRoutes);
+
+app.use('/api/v1/expenses', expenseRoutes);
 
 app.get("/", (req, res) => {
     res.json({ message: "Bienvenue sur Expensify !" });

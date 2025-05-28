@@ -3,6 +3,8 @@ const config = require("../config/jwtconfig");
 
 const tokenCheck = (req, res, next) => {
     const token = req.header('Authorization')?.split(" ")[1];
+    const { query } = req.query;
+
     if (!token){ 
         return res.status(401).json({ message: 'Accès refusé, token manquant' });
     }
