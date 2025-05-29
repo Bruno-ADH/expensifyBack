@@ -11,6 +11,7 @@ const path = require('path');
 const requestId = require("./middleware/requestId");
 const categoryRoutes = require("./routes/category.routes");
 const expenseRoutes = require('./routes/expense.routes');
+const statsRoutes = require('./routes/stats.routes');
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.use('/api/v1/users', userRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 
 app.use('/api/v1/expenses', expenseRoutes);
+
+app.use('/api/v1/stats', statsRoutes);
+
 
 app.get("/", (req, res) => {
     res.json({ message: "Bienvenue sur Expensify !" });
