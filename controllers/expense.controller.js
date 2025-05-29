@@ -1,5 +1,7 @@
 const Expense = require("../models/Expense");
 const Category = require('../models/Category');
+const sendNotification = require('../services/notificationService').sendNotification;
+const checkBudgetThreshold = require('../services/notificationService').checkBudgetThreshold;
 
 exports.createExpense = async (req, res) => {
     const { title, amount, date, category, description } = req.body;
@@ -25,6 +27,11 @@ exports.createExpense = async (req, res) => {
             status: 'active'
         });
         await expense.save();
+
+        const io = req.app.get('io');
+        await sendNotification(io, req.user.id, `Nouvelle dépense ajoutée : ${expense.title}`, 'info');
+        await checkBudgetThreshold(io, req.user.id, expense);
+
         res.status(201).json(expense);
     } catch (err) {
         res.status(500).json({ message: "Erreur création", error: err.message });
@@ -51,7 +58,7 @@ exports.getAllExpenses = async (req, res) => {
         const expenses = await Expense.find(query)
             .populate('category', 'name')
             .sort({ date: -1 });
-        res.json(expenses);
+        res.status(200).json(expenses);
     } catch (err) {
         res.status(500).json({ message: "Erreur récupération", error: err.message });
     }
@@ -66,7 +73,7 @@ exports.getOneExpense = async (req, res) => {
         }).populate('category', 'name');
 
         if (!expense) return res.status(404).json({ message: "Dépense introuvable" });
-        res.json(expense);
+        res.status(200).json(expense);
     } catch (err) {
         res.status(500).json({ message: "Erreur", error: err.message });
     }
@@ -75,8 +82,6 @@ exports.getOneExpense = async (req, res) => {
 exports.searchExpenses = async (req, res) => {
     const userId = req.user.id;
     const { query } = req.query;
-
-    console.log("queryjjjj ", query)
 
     try {
         const expenses = await Expense.find({
@@ -89,9 +94,9 @@ exports.searchExpenses = async (req, res) => {
         })
             .populate('category', 'name')
             .sort({ date: -1 });
-        res.json(expenses);
+        res.status(200).json(expenses);
     } catch (error) {
-        res.status(500).json({ message: "Erreur de recherche" , error: error.message });
+        res.status(500).json({ message: "Erreur de recherche", error: error.message });
     }
 };
 
@@ -119,7 +124,10 @@ exports.updateExpense = async (req, res) => {
         expense.description = description || expense.description;
 
         await expense.save();
-        res.json(expense);
+        const io = req.app.get('io');
+        await sendNotification(io, req.user.id, `Dépense modifiée : ${expense.title}`, 'info');
+        await checkBudgetThreshold(io, req.user.id, expense);
+        res.status(200).json(expense);
     } catch (err) {
         res.status(500).json({ message: "Erreur modification", error: err.message });
     }
@@ -136,7 +144,9 @@ exports.blockExpense = async (req, res) => {
         );
         if (!expense) return res.status(404).json({ message: "Dépense non trouvée" });
 
-        res.json({ message: "Dépense bloquée", expense });
+        const io = req.app.get('io');
+        await sendNotification(io, req.user.id, `Dépense supprimée : ${expense.title}`, 'info');
+        res.status(200).json({ message: "Dépense bloquée", expense });
     } catch (err) {
         res.status(500).json({ message: "Erreur suppression", error: err.message });
     }

@@ -1,4 +1,4 @@
-const express = require ("express");
+const express = require("express");
 const dotenv = require("dotenv");
 dotenv.config();
 const cors = require("cors");
@@ -12,8 +12,27 @@ const requestId = require("./middleware/requestId");
 const categoryRoutes = require("./routes/category.routes");
 const expenseRoutes = require('./routes/expense.routes');
 const statsRoutes = require('./routes/stats.routes');
+const jwt = require("jsonwebtoken");
+const http = require('http');
+const { Server } = require('socket.io');
+const configureSocket = require('./socket/index.js');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: '*', // URL de ton futur frontend
+        methods: ['*'],
+    },
+});
+
+// const io = new Server(server, {
+//   cors: {
+//     origin: 'http://localhost:3000', // URL de ton frontend
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+//     allowedHeaders: ['Accept', 'Content-Type'], // Autoriser les headers spécifiques
+//   },
+// });
 
 connectDB();
 
@@ -54,6 +73,10 @@ app.get("/", (req, res) => {
     res.json({ message: "Bienvenue sur Expensify !" });
 });
 
+configureSocket(io);
+
+app.set('io', io);
+
 app.use((req, res, next) => {
     res.status(404).json({
         name: "NotFound",
@@ -64,5 +87,5 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT,()=> console.log(`Serveur démarré sur http://127.0.0.1:${PORT}`));
+server.listen(PORT, () => console.log(`Serveur démarré sur http://127.0.0.1:${PORT}`));
 

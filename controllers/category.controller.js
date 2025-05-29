@@ -1,20 +1,23 @@
 const Category = require("../models/Category");
 const Expense = require('../models/Expense');
+const sendNotification = require('../services/notificationService').sendNotification;
 
 exports.createCategory = async (req, res) => {
-    const userId = req.user.id;
+  const userId = req.user.id;
   try {
     const { name, icon, color } = req.body;
 
     const category = new Category({
       user: userId,
       name,
-       status: 'active',
+      status: 'active',
       icon,
       color,
     });
 
     const savedCategory = await category.save();
+    const io = req.app.get('io');
+    await sendNotification(io, req.user.id, `Nouvelle catégorie ajoutée : ${category.name}`, 'info');
     res.status(201).json(savedCategory);
   } catch (err) {
     if (err.code === 11000) {
@@ -25,7 +28,7 @@ exports.createCategory = async (req, res) => {
 };
 
 exports.getCategories = async (req, res) => {
-    const userId = req.user.id;
+  const userId = req.user.id;
 
   try {
     const categories = await Category.find({ user: userId, status: 'active' }).sort({ name: 1 });
@@ -36,11 +39,11 @@ exports.getCategories = async (req, res) => {
 };
 
 exports.updateCategory = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
   const { name, icon, color } = req.body;
   const userId = req.user.id;
+  console.log('id  :>> ', id);
   try {
-
     const updated = await Category.findOneAndUpdate(
       { _id: id, user: userId, status: 'active' },
       { name, icon, color },
@@ -51,7 +54,10 @@ exports.updateCategory = async (req, res) => {
       return res.status(404).json({ message: "Catégorie non trouvée" });
     }
 
-    res.json(updated);
+    const io = req.app.get('io');
+    await sendNotification(io, req.user.id, `Catégorie modifiée : ${updated.name}`, 'info');
+
+    res.status(200).json(updated);
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({ message: "Cette catégorie existe déjà pour cet utilisateur" });
@@ -61,7 +67,7 @@ exports.updateCategory = async (req, res) => {
 };
 
 exports.deleteCategory = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
   const userId = req.user.id;
 
   try {
@@ -80,9 +86,12 @@ exports.deleteCategory = async (req, res) => {
       return res.status(400).json({ message: "Impossible de supprimer cette catégorie, elle est utilisée dans des dépenses." });
     }
 
-    category.status = 'blocked'; 
+    category.status = 'blocked';
     await category.save();
-    res.json({ message: "Catégorie supprimée avec succès" });
+    const io = req.app.get('io');
+    await sendNotification(io, req.user.id, `Catégorie supprimée : ${category.name}`, 'info');
+
+    res.status(200).json({ message: "Catégorie supprimée avec succès" });
   } catch (err) {
     res.status(500).json({ message: "Erreur lors de la suppression", error: err.message });
   }
