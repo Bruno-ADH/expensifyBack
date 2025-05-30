@@ -6,6 +6,8 @@ const checkBudgetThreshold = require('../services/notificationService').checkBud
 exports.createExpense = async (req, res) => {
     const { title, amount, date, category, description } = req.body;
     const userId = req.user.id;
+
+    
     try {
         if (!title || !amount || !date || !category) {
             return res.status(400).json({ message: "Champs requis manquants" });
