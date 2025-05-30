@@ -1,0 +1,19 @@
+name: Sync to secondary repo
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v3
+
+      - name: Push to secondary repo
+        run: |
+          git config --global user.name "Sync Bot"
+          git config --global user.email "bot@example.com"
+          git remote add target https://EXPENSIFY-Site:${{ secrets.TARGET_REPO_TOKEN }}@github.com/EXPENSIFY-Site/ExpensifyBack.git
+          git push -f target master
