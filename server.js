@@ -16,12 +16,16 @@ const jwt = require("jsonwebtoken");
 const http = require('http');
 const { Server } = require('socket.io');
 const configureSocket = require('./socket/index.js');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
 const app = express();
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: '*', // URL de ton futur frontend
+        origin: '*', 
         methods: ['*'],
     },
 });
@@ -55,6 +59,7 @@ app.use(express.urlencoded({ extended: true }));
 //         allowedHearders: ["Content-Type", "Authorization"],
 //     })
 // );
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/uploads', express.static('uploads')); // Rendre les fichiers accessibles
 

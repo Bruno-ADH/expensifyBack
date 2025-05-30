@@ -1,16 +1,23 @@
-#Clone the projet in local
+# Expensify Backend
 
-#initialise the project
-pnpm install
+Expensify est une API backend pour gérer les dépenses personnelles avec des notifications en temps réel. Développée avec Node.js, Express, MongoDB, et Socket.IO, elle permet aux utilisateurs de créer des comptes, gérer des catégories et dépenses, visualiser des statistiques, et recevoir des alertes (ex. : dépassement de budget à 10 000 FCFA par catégorie/mois).
 
-AND ENJOY IT TO ADD MORE CODE !!
+## Fonctionnalités
+- **Authentification** : Inscription, connexion, gestion de profil (JWT).
+- **Catégories** : Création, mise à jour, suppression (soft delete).
+- **Dépenses** : Ajout, recherche, filtrage, blocage (soft delete).
+- **Statistiques** : Graphiques mensuels, par catégorie, totaux cumulés, évolution (%).
+- **Notifications** : Alertes en temps réel via WebSocket pour actions (ex. : nouvelle dépense) et dépassements de budget.
+- **Documentation** : API REST (`swagger.yaml`).
 
-{
-  "email": "brunoadenhouessou@gmail.com",
-  "password": "password123"
-}
+## Prérequis
+- **Node.js** : v16 ou supérieur.
+- **MongoDB** : Local ou Atlas.
+- **Postman** : Pour tester l’API REST et WebSocket.
+- **Navigateur** : Pour accéder à Swagger UI.
 
-GET /api/v1/stats/monthly : Dépenses par mois (barres).
-GET /api/v1/stats/by-category : Dépenses par catégorie (camembert).
-GET /api/v1/stats/total : Total cumulatif des dépenses (ligne).
-GET /api/v1/stats/evolution : Pourcentage d’évolution (barres).
+## Installation
+1. **Cloner le dépôt** :
+   ```bash
+   git clone https://github.com/Bruno-ADH/expensifyBack.git
+   cd expensifyBack

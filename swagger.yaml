@@ -1,0 +1,962 @@
+openapi: 3.0.3
+info:
+  title: Gestion de Dépenses API
+  version: 1.0.0
+  description: API pour gérer les dépenses personnelles avec notifications en temps réel via WebSocket.
+servers:
+  - url: http://127.0.0.1:5000/api/v1
+    description: Serveur local
+paths:
+  /api/v1/authenticate/register:
+    post:
+      summary: Créer un compte utilisateur
+      description: Inscrit un nouvel utilisateur et envoie un email de bienvenue. Retourne un token JWT et les détails de l'utilisateur.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '200':
+          description: Inscription réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Email déjà utilisé ou champs invalides
+          content:
+            application/json:
+              example:
+                message: "L'utilisateur existe déjà."
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                success: false
+                message: "Erreur d'inscription"
+                error: "Détails de l'erreur"
+ 
+  /api/v1/authenticate/login:
+    post:
+      summary: Se connecter
+      description: Connecte un utilisateur existant et retourne un token JWT avec ses détails.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Email ou mot de passe incorrect
+          content:
+            application/json:
+              example:
+                message: "Email ou Mot de passe incorrect."
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur serveur"
+                error: {}
+  
+  /api/v1/users/profile:
+    get:
+      summary: Obtenir le profil utilisateur
+      description: Récupère les informations du profil de l'utilisateur connecté, sans le mot de passe.
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil récupéré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, description: "Indique si l'opération a réussi" }
+                  message: { type: string, description: "Message de confirmation" }
+                  user: { $ref: '#/components/schemas/User' }
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Aucun Utilisateur trouvé"
+                users: null
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                success: false
+                message: "Erreur de récuperation de l'utilisateur"
+                error: "Détails de l'erreur"
+    put:
+      summary: Mettre à jour le profil utilisateur
+      description: Met à jour les informations du profil (prénom, nom, email, téléphone, mot de passe). Retourne un nouveau token.
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '200':
+          description: Profil mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Email déjà utilisé ou aucune information à mettre à jour
+          content:
+            application/json:
+              example:
+                message: "L'email est déjà utilisé par un autre utilisateur"
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              example:
+                message: "Aucun Utilisateur trouvé"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                success: false
+                message: "Erreur de modification"
+                error: "Détails de l'erreur"
+  
+  /api/v1/users/avatar:
+    put:
+      summary: Mettre à jour l'avatar de l'utilisateur
+      description: Télécharge un nouvel avatar et supprime l'ancien (si différent de l'image par défaut). Utilise multipart/form-data.
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Fichier image de l'avatar
+              required: [avatar]
+      responses:
+        '200':
+          description: Avatar mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
+        '400':
+          description: Aucun fichier fourni
+          content:
+            application/json:
+              example:
+                message: "Aucun fichier d'avatar fourni"
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              example:
+                message: "Utilisateur non trouvé"
+        '500':
+          description: "Erreur serveur (ex. : échec de suppression de l'ancien avatar)"
+          content:
+            application/json:
+              example:
+                success: false
+                message: "Erreur lors de la mise à jour de l'avatar"
+                error: "Détails de l'erreur"
+  
+  /api/v1/categories:
+    post:
+      summary: Créer une catégorie
+      description: Crée une nouvelle catégorie pour l'utilisateur connecté avec un nom, une icône et une couleur optionnels. Envoie une notification WebSocket.
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Catégorie créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Catégorie déjà existante ou champs invalides
+          content:
+            application/json:
+              example:
+                message: "Cette catégorie existe déjà pour cet utilisateur."
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la création"
+                error: "Détails de l'erreur"
+    get:
+      summary: Lister les catégories
+      description: Récupère toutes les catégories actives de l'utilisateur connecté, triées par nom.
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la récupération"
+                error: "Détails de l'erreur"
+
+  /api/v1/categories/{id}:
+    put:
+      summary: Mettre à jour une catégorie
+      description: Met à jour le nom, l'icône ou la couleur d'une catégorie existante. Envoie une notification WebSocket.
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la catégorie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateInput'
+      responses:
+        '200':
+          description: Catégorie mise à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Catégorie déjà existante ou champs invalides
+          content:
+            application/json:
+              example:
+                message: "Cette catégorie existe déjà pour cet utilisateur"
+        '404':
+          description: Catégorie non trouvée
+          content:
+            application/json:
+              example:
+                message: "Catégorie non trouvée"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la mise à jour"
+                error: "Détails de l'erreur"
+    delete:
+      summary: Supprimer une catégorie
+      description: Supprime une catégorie (soft delete en 'blocked') si aucune dépense n'est associée. Envoie une notification WebSocket.
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la catégorie
+      responses:
+        '200':
+          description: Catégorie supprimée avec succès
+          content:
+            application/json:
+              example:
+                message: "Catégorie supprimée avec succès"
+        '400':
+          description: Catégorie utilisée par des dépenses
+          content:
+            application/json:
+              example:
+                message: "Impossible de supprimer cette catégorie, elle est utilisée dans des dépenses."
+        '404':
+          description: Catégorie non trouvée
+          content:
+            application/json:
+              example:
+                message: "Catégorie non trouvée"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la suppression"
+                error: "Détails de l'erreur"
+
+  /api/v1/expenses:
+    post:
+      summary: Créer une dépense
+      description: Crée une nouvelle dépense pour l'utilisateur connecté. Vérifie la catégorie, envoie une notification WebSocket et vérifie le seuil de budget.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseInput'
+      responses:
+        '201':
+          description: Dépense créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          description: Champs manquants ou catégorie invalide
+          content:
+            application/json:
+              example:
+                message: "Catégorie invalide ou inactive"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur création"
+                error: "Détails de l'erreur"
+    get:
+      summary: Lister les dépenses
+      description: Récupère les dépenses actives de l'utilisateur avec filtres optionnels (dates, catégorie). Inclut le nom de la catégorie.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: "Date de début (ex. : 2025-05-01)"
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: "Date de fin (ex. : 2025-05-31)"
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: ID de la catégorie
+      responses:
+        '200':
+          description: Liste des dépenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur récupération"
+                error: "Détails de l'erreur"
+
+  /api/v1/expenses/search:
+    get:
+      summary: Rechercher des dépenses
+      description: Recherche des dépenses actives par mot-clé dans le titre ou la description. Inclut le nom de la catégorie.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Mot-clé de recherche
+      responses:
+        '200':
+          description: Résultats de la recherche
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur de recherche"
+                error: "Détails de l'erreur"
+
+  /api/v1/expenses/{id}:
+    get:
+      summary: Obtenir une dépense
+      description: Récupère une dépense spécifique active de l'utilisateur. Inclut le nom de la catégorie.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la dépense
+      responses:
+        '200':
+          description: Dépense récupérée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '404':
+          description: Dépense non trouvée
+          content:
+            application/json:
+              example:
+                message: "Dépense introuvable"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur"
+                error: "Détails de l'erreur"
+    put:
+      summary: Mettre à jour une dépense
+      description: Met à jour les champs d'une dépense active. Vérifie la catégorie, envoie une notification WebSocket et vérifie le seuil de budget.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la dépense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseUpdateInput'
+      responses:
+        '200':
+          description: Dépense mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          description: Catégorie invalide
+          content:
+            application/json:
+              example:
+                message: "Catégorie invalide ou inactive"
+        '404':
+          description: Dépense non trouvée
+          content:
+            application/json:
+              example:
+                message: "Dépense introuvable"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur modification"
+                error: "Détails de l'erreur"
+
+  /api/v1/expenses/{id}/block:
+    patch:
+      summary: Bloquer une dépense
+      description: Marque une dépense comme bloquée (soft delete). Envoie une notification WebSocket.
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la dépense
+      responses:
+        '200':
+          description: Dépense bloquée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, description: "Message de confirmation" }
+                  expense: { $ref: '#/components/schemas/Expense' }
+        '404':
+          description: Dépense non trouvée
+          content:
+            application/json:
+              example:
+                message: "Dépense non trouvée"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur suppression"
+                error: "Détails de l'erreur"
+
+  /api/v1/stats/monthly:
+    get:
+      summary: Statistiques mensuelles des dépenses
+      description: Récupère les dépenses mensuelles de l'utilisateur pour une année donnée (optionnel). Retourne un format compatible Chart.js.
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+          description: "Année des statistiques (ex. : 2025)"
+      responses:
+        '200':
+          description: Statistiques mensuelles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartData'
+              example:
+                labels: ["Janvier", "Février", ..., "Décembre"]
+                datasets:
+                  - label: "Dépenses (FCFA)"
+                    data: [0, 0, ..., 11000, 0]
+                    backgroundColor: "rgba(75, 192, 192, 0.6)"
+                    borderColor: "rgba(75, 192, 192, 1)"
+                    borderWidth: 1
+        '400':
+          description: Année invalide
+          content:
+            application/json:
+              example:
+                message: "Année invalide"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la récupération des statistiques mensuelles"
+                error: "Détails de l'erreur"
+  
+  /api/v1/stats/by-category:
+    get:
+      summary: Statistiques par catégorie
+      description: Récupère les dépenses par catégorie pour une période donnée (optionnel). Retourne un format compatible Chart.js.
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: "Date de début (ex. : 2025-01-01)"
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: "Date de fin (ex. : 2025-12-31)"
+      responses:
+        '200':
+          description: Statistiques par catégorie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartData'
+              example:
+                labels: ["Transport", "Alimentation"]
+                datasets:
+                  - label: "Dépenses par catégorie (FCFA)"
+                    data: [11000, 5000]
+                    backgroundColor: ["rgba(75, 192, 192, 0.6)", "rgba(255, 99, 132, 0.6)"]
+                    borderColor: ["rgba(75, 192, 192, 1)", "rgba(255, 99, 132, 1)"]
+                    borderWidth: 1
+        '400':
+          description: Dates invalides
+          content:
+            application/json:
+              example:
+                message: "Date de début invalide"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la récupération des statistiques par catégorie"
+                error: "Détails de l'erreur"
+  
+  /api/v1/stats/total:
+    get:
+      summary: Total cumulé des dépenses
+      description: Récupère le total cumulé des dépenses par mois pour une année donnée (optionnel). Retourne un format compatible Chart.js.
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+          description: "Année des statistiques (ex. : 2025)"
+      responses:
+        '200':
+          description: Total cumulé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartData'
+              example:
+                labels: ["Janvier", "Février", ..., "Décembre"]
+                datasets:
+                  - label: "Total des dépenses (FCFA)"
+                    data: [0, 0, ..., 11000, 11000]
+                    backgroundColor: "rgba(153, 102, 255, 0.2)"
+                    borderColor: "rgba(153, 102, 255, 1)"
+                    borderWidth: 1
+                    fill: true
+        '400':
+          description: Année invalide
+          content:
+            application/json:
+              example:
+                message: "Année invalide"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la récupération des totaux mensuels"
+                error: "Détails de l'erreur"
+  
+  /api/v1/stats/evolution:
+    get:
+      summary: Évolution des dépenses
+      description: Calcule l'évolution en pourcentage des dépenses entre mois consécutifs pour une année donnée (optionnel). Retourne un format compatible Chart.js.
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: integer
+          description: "Année des statistiques (ex. : 2025)"
+      responses:
+        '200':
+          description: Évolution des dépenses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartData'
+              example:
+                labels: ["Février vs Janvier", "Mars vs Février", ..., "Décembre vs Novembre"]
+                datasets:
+                  - label: "Évolution (%)"
+                    data: [0, 0, ..., 15, 0]
+                    backgroundColor: "rgba(255, 159, 64, 0.6)"
+                    borderColor: "rgba(255, 159, 64, 1)"
+                    borderWidth: 1
+        '400':
+          description: Année invalide
+          content:
+            application/json:
+              example:
+                message: "Année invalide"
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              example:
+                message: "Erreur lors de la récupération de l'évolution"
+                error: "Détails de l'erreur"
+
+
+
+
+
+components:
+  schemas:
+    RegisterInput:
+      type: object
+      required: [firstName, lastName, email, phone, password]
+      properties:
+        firstName: { type: string, description: "Prénom de l'utilisateur" }
+        lastName: { type: string, description: "Nom de famille de l'utilisateur" }
+        email: { type: string, format: email, description: "Adresse email" }
+        phone: { type: string, description: "Numéro de téléphone" }
+        password: { type: string, minLength: 6, description: "Mot de passe (minimum 6 caractères)" }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, description: "Adresse email" }
+        password: { type: string, description: "Mot de passe" }
+    User:
+      type: object
+      properties:
+        _id: { type: string, description: "ID de l'utilisateur" }
+        firstName: { type: string, description: "Prénom" }
+        lastName: { type: string, description: "Nom de famille" }
+        email: { type: string, format: email, description: "Email" }
+        phone: { type: string, description: "Téléphone" }
+        role: { type: string, description: "Rôle de l'utilisateur" }
+        avatar: { type: string, description: "URL de la photo de profil", nullable: true }
+    AuthResponse:
+      type: object
+      properties:
+        success: { type: boolean, description: "Indique si l'opération a réussi" }
+        message: { type: string, description: "Message de confirmation" }
+        token: { type: string, description: "Token JWT pour l'authentification" }
+        user: { $ref: '#/components/schemas/User' }
+    UserUpdateInput:
+      type: object
+      properties:
+        firstName: { type: string, description: "Prénom de l'utilisateur" }
+        lastName: { type: string, description: "Nom de famille de l'utilisateur" }
+        email: { type: string, format: email, description: "Adresse email" }
+        phone: { type: string, description: "Numéro de téléphone" }
+        password: { type: string, minLength: 6, description: "Nouveau mot de passe (optionnel)" }
+    AvatarResponse:
+      type: object
+      properties:
+        success: { type: boolean, description: "Indique si l'opération a réussi" }
+        message: { type: string, description: "Message de confirmation" }
+        user:
+          type: object
+          properties:
+            _id: { type: string, description: "ID de l'utilisateur" }
+            firstName: { type: string, description: "Prénom" }
+            lastName: { type: string, description: "Nom de famille" }
+            email: { type: string, format: email, description: "Email" }
+            phone: { type: string, description: "Téléphone" }
+            avatar: { type: string, description: "Nom du fichier de l'avatar", nullable: true }
+    Category:
+      type: object
+      properties:
+        _id: { type: string, description: "ID de la catégorie" }
+        user: { type: string, description: "ID de l'utilisateur" }
+        name: { type: string, description: "Nom de la catégorie" }
+        status: { type: string, enum: [active, blocked], description: "Statut de la catégorie" }
+        icon: { type: string, description: "Icône de la catégorie (optionnel)", nullable: true }
+        color: { type: string, description: "Couleur hexadécimale (optionnel)", nullable: true }
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: "Nom de la catégorie (1-50 caractères)"
+        icon:
+          type: string
+          description: "Icône de la catégorie (optionnel)"
+          nullable: true
+        color:
+          type: string
+          pattern: "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$"
+          description: "Code couleur hexadécimal (optionnel)"
+          nullable: true
+    CategoryUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: "Nom de la catégorie (1-50 caractères, optionnel)"
+        icon:
+          type: string
+          description: "Icône de la catégorie (optionnel)"
+          nullable: true
+        color:
+          type: string
+          pattern: "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$"
+          description: "Code couleur hexadécimal (optionnel)"
+          nullable: true
+    Expense:
+      type: object
+      properties:
+        _id: { type: string, description: "ID de la dépense" }
+        title: { type: string, description: "Titre de la dépense" }
+        amount: { type: number, description: "Montant de la dépense" }
+        date: { type: string, format: date-time, description: "Date de la dépense" }
+        category:
+          type: object
+          properties:
+            _id: { type: string, description: "ID de la catégorie" }
+            name: { type: string, description: "Nom de la catégorie" }
+          description: "Catégorie associée"
+        description: { type: string, description: "Description de la dépense", nullable: true }
+        user: { type: string, description: "ID de l'utilisateur" }
+        status: { type: string, enum: [active, blocked], description: "Statut de la dépense" }
+    ExpenseInput:
+      type: object
+      required: [title, amount, date, category]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: "Titre de la dépense (1-100 caractères)"
+        amount:
+          type: number
+          minimum: 0
+          description: "Montant de la dépense (≥ 0)"
+        date:
+          type: string
+          format: date-time
+          description: "Date de la dépense (ISO)"
+        category:
+          type: string
+          description: "ID de la catégorie (ObjectId)"
+        description:
+          type: string
+          maxLength: 500
+          description: "Description de la dépense (optionnel, ≤ 500 caractères)"
+          nullable: true
+    ExpenseUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: "Titre de la dépense (optionnel, 1-100 caractères)"
+        amount:
+          type: number
+          minimum: 0
+          description: "Montant de la dépense (optionnel, ≥ 0)"
+        date:
+          type: string
+          format: date-time
+          description: "Date de la dépense (optionnel, ISO)"
+        category:
+          type: string
+          description: "ID de la catégorie (optionnel, ObjectId)"
+        description:
+          type: string
+          maxLength: 500
+          description: "Description de la dépense (optionnel, ≤ 500 caractères)"
+          nullable: true
+    SearchInput:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: "Mot-clé de recherche (≥ 1 caractère)"
+    ChartData:
+      type: object
+      properties:
+        labels:
+          type: array
+          items:
+            type: string
+          description: "Étiquettes pour l'axe X (ex. : mois, catégories)"
+        datasets:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                description: "Nom du dataset (ex. : Dépenses)"
+              data:
+                type: array
+                items:
+                  type: number
+                description: "Valeurs numériques"
+              backgroundColor:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+                description: "Couleur(s) de fond"
+              borderColor:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+                description: "Couleur(s) des bordures"
+              borderWidth:
+                type: integer
+                description: "Largeur des bordures"
+              fill:
+                type: boolean
+                description: "Remplissage du graphique (optionnel)"
+          description: "Datasets pour Chart.js"
+  
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
